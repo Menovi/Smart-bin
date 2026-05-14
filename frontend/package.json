@@ -1,0 +1,17 @@
+{
+  "name": "smartbin-mdvrp",
+  "version": "1.0.0",
+  "description": "SmartBin — Multi-Depot Vehicle Routing Platform with ACO+LNS+ILS hybrid optimisation",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "leaflet": "^1.9.4"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0"
+  }
+}

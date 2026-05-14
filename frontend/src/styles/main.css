@@ -1,0 +1,46 @@
+/* ═══════════════════════════════════════════════
+   src/styles/main.css
+   SmartBin MDVRP — Global Styles
+   ═══════════════════════════════════════════════ */
+
+/* ── TOKENS ── */
+:root {
+  --bg:       #0a0e14;
+  --surface:  #111720;
+  --surface2: #1a2232;
+  --border:   #1e2d42;
+  --accent:   #00e5ff;
+  --accent2:  #7c4dff;
+  --text:     #e8f0fe;
+  --muted:    #637496;
+  --green:    #00e676;
+  --yellow:   #ffea00;
+  --orange:   #ff6d00;
+  --red:      #ff1744;
+  --fd: 'Syne', sans-serif;
+  --fm: 'Space Mono', monospace;
+}
+
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--fd);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── ANIMATIONS ── */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .3; }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }

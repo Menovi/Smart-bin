@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SmartBin — MDVRP Intelligence Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+  </head>
+  <body>
+    <!-- ── TOP BAR ── -->
+    <div class="topbar">
+      <div class="logo">SmartBin <span>/ MDVRP</span></div>
+      <div class="tdiv"></div>
+      <div class="city-sel">
+        📍
+        <select id="citySelect">
+          <option value="bangalore">Bangalore</option>
+          <option value="delhi">Delhi</option>
+          <option value="mumbai">Mumbai</option>
+          <option value="chennai">Chennai</option>
+          <option value="hyderabad">Hyderabad</option>
+        </select>
+      </div>
+      <div class="tdiv"></div>
+      <span class="fleet-label">
+        3 depots · 6 trucks · <span id="binCountLabel">120</span> bins
+      </span>
+      <div class="tbr">
+        <div class="pill cr">
+          <div class="d"></div>
+          <span id="cC">0</span> CRITICAL
+        </div>
+        <div class="pill wa">
+          <div class="d"></div>
+          <span id="wC">0</span> HIGH
+        </div>
+        <div class="pill ok">
+          <div class="d"></div>
+          <span id="oC">0</span> OK
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TABS ── -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="map">🗺️ Live Map</button>
+      <button class="tab-btn" data-tab="iotlive">📡 IoT Live</button>
+      <button class="tab-btn" data-tab="detection">🧠 Detection</button>
+      <button class="tab-btn" data-tab="dashboard">📊 Dashboard</button>
+      <button class="tab-btn" data-tab="notifications">
+        🔔 Alerts <span class="nbadge" id="nb">0</span>
+      </button>
+      <button class="tab-btn" data-tab="analytics">📈 Analytics</button>
+    </div>
+
+    <!-- ── CONTENT ── -->
+    <div class="content">
+      <!-- MAP TAB -->
+      <div class="tab-panel active" id="panel-map">
+        <div id="map">
+          <div id="mapLoading">
+            <div class="spin-ring"></div>
+            <div id="algoStatus">Loading map…</div>
+          </div>
+          <div class="add-hint" id="addHint">Click anywhere to place a bin</div>
+        </div>
+        <div class="map-sidebar">
+          <div class="ss">
+            <div class="st">Depots &amp; Coverage</div>
+            <div id="depotLegend"></div>
+          </div>
+          <div class="ss">
+            <div class="st">Fill Level</div>
+            <div class="fill-legend">
+              <div class="fl-row">
+                <span
+                  class="fl-dot"
+                  style="background: #ff1744; box-shadow: 0 0 7px #ff1744"
+                ></span
+                ><span>Critical ≥90%</span>
+              </div>
+              <div class="fl-row">
+                <span
+                  class="fl-dot"
+                  style="background: #ff6d00; box-shadow: 0 0 7px #ff6d00"
+                ></span
+                ><span>High ≥75%</span>
+              </div>
+              <div class="fl-row">
+                <span
+                  class="fl-dot"
+                  style="background: #ffea00; box-shadow: 0 0 7px #ffea00"
+                ></span
+                ><span>Moderate ≥60%</span>
+              </div>
+              <div class="fl-row">
+                <span
+                  class="fl-dot"
+                  style="background: #00e676; box-shadow: 0 0 7px #00e676"
+                ></span
+                ><span>Low &lt;60%</span>
+              </div>
+              <div
+                style="
+                  margin-top: 8px;
+                  padding-top: 8px;
+                  border-top: 1px solid var(--border);
+                "
+              >
+                <div class="fl-row">
+                  <span
+                    class="fl-dot"
+                    style="
+                      background: transparent;
+                      border: 2px dashed #ffea00;
+                      box-shadow: none;
+                    "
+                  ></span
+                  ><span style="color: #ffea00">Extended dispatch</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="ss">
+            <div class="st">Route Controls</div>
+            <button class="btn-add" id="btnAdd">＋ Place Bin</button>
+            <button class="btn-primary" id="btnGreedy">
+              🚛 Fast Route (Greedy NN)
+            </button>
+            <button class="btn-osrm" id="btnHybrid">
+              🧬 Smart Route (ACO+LNS+ILS)
+            </button>
+            <button class="btn-sec" id="btnClear">✕ Clear Routes</button>
+            <div class="progress-wrap" id="progWrap" style="display: none">
+              <div class="progress-label">
+                <span id="progPhase">Initialising…</span>
+                <span id="progPct">0%</span>
+              </div>
+              <div class="progress-bar">
+                <div
+                  class="progress-fill"
+                  id="progFill"
+                  style="width: 0%"
+                ></div>
+              </div>
+            </div>
+          </div>
+          <div class="ss" id="routeSumSec" style="display: none">
+            <div class="st">Route Summary</div>
+            <div class="route-info" id="routeSum"></div>
+          </div>
+          <div class="st sidebar-bins-label">Bins (sorted by fill)</div>
+          <div class="bin-list" id="binList"></div>
+          <div class="refresh-bar">
+            <div class="live-dot"></div>
+            Live · auto-refresh <span id="rcd">30s</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- DASHBOARD TAB -->
+      <div class="tab-panel" id="panel-dashboard">
+        <div class="dash-inner">
+          <div class="dash-hdr">
+            <div class="dash-title">Fleet Dashboard</div>
+            <button class="sim-btn" id="simBtn">
+              <span id="simI" style="display: inline-block">⟳</span> Simulate
+              Fill Change
+            </button>
+          </div>
+          <div class="kpi-row" id="kpiRow"></div>
+          <div class="depot-fleet" id="depotFleet"></div>
+          <div class="data-tbl" id="dataTbl"></div>
+        </div>
+      </div>
+
+      <!-- NOTIFICATIONS TAB -->
+      <div class="tab-panel" id="panel-notifications">
+        <div class="notif-inner" id="notifInner"></div>
+      </div>
+
+      <!-- ANALYTICS TAB -->
+      <div class="tab-panel" id="panel-analytics">
+        <div class="ana-inner">
+          <div class="dash-hdr">
+            <div class="dash-title">Fill Analytics</div>
+            <div class="ana-city-label">
+              City: <span id="anaCity">Bangalore</span>
+            </div>
+          </div>
+          <div class="ana-grid">
+            <div class="ana-card">
+              <div class="ana-card-title">Fill Level by Bin</div>
+              <div class="bar-chart" id="barChart"></div>
+            </div>
+            <div class="ana-card">
+              <div class="ana-card-title">Status Distribution</div>
+              <div class="donut-wrap" id="donutWrap"></div>
+            </div>
+            <div class="ana-card full-width">
+              <div class="ana-card-title">Priority Collection Queue</div>
+              <div class="pq-wrap" id="pqWrap"></div>
+              <div class="pq-hint">Click any bin to fly to it on the map.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- IOT LIVE TAB -->
+      <div class="tab-panel" id="panel-iotlive"></div>
+
+      <!-- DETECTION TAB -->
+      <div class="tab-panel" id="panel-detection"></div>
+    </div>
+
+    <!-- ALGORITHM PROGRESS MODAL -->
+    <div class="modal-overlay" id="algoModal">
+      <div class="modal">
+        <div class="modal-title">🧬 Hybrid Optimisation</div>
+        <div class="modal-sub">
+          ACO + Large Neighbourhood Search + Iterative Local Search<br />
+          Running in background — UI stays responsive.
+        </div>
+        <div id="modalPhases"></div>
+        <div class="modal-prog">
+          <div class="modal-prog-label">
+            <span id="mpLabel">Initialising…</span>
+            <span id="mpPct">0%</span>
+          </div>
+          <div class="modal-prog-bar">
+            <div class="modal-prog-fill" id="mpFill" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

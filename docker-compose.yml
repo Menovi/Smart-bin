@@ -1,0 +1,18 @@
+# Optional: run a local Mosquitto broker instead of using the public HiveMQ.
+# Use this for production / when you want to keep traffic private.
+#
+# Start:   docker compose up -d
+# Stop:    docker compose down
+version: "3.9"
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: smartbin-mqtt
+    ports:
+      - "1883:1883"     # MQTT
+      - "9001:9001"     # WebSocket (if you want browser MQTT later)
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    restart: unless-stopped
