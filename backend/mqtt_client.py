@@ -1,64 +1,92 @@
-"""MQTT subscriber.
+"""MQTT subscriber — paho-mqtt in a background thread.
 
-Topics:
-  smartbin/<bin_id>/telemetry   — JSON telemetry from each bin simulator/device
-  smartbin/<bin_id>/event       — discrete events (lid open, tamper, etc.)
-
-Default broker: public HiveMQ (broker.hivemq.com:1883). For production, run
-your own Mosquitto via docker-compose.
+Using paho-mqtt (synchronous) in a daemon thread and bridging messages
+back to the asyncio event loop via run_coroutine_threadsafe.
+This avoids the asyncio add_reader/add_writer incompatibility with
+Windows ProactorEventLoop that aiomqtt suffers from.
 """
 import os
 import json
 import asyncio
-from datetime import datetime
-import aiomqtt
+import threading
+import time
+import paho.mqtt.client as paho
 
 from database import SessionLocal, Bin, Telemetry, Alert
 from alerts import evaluate_telemetry, fan_out
 
 BROKER_HOST = os.getenv("MQTT_HOST", "broker.hivemq.com")
 BROKER_PORT = int(os.getenv("MQTT_PORT", "1883"))
+MQTT_USER   = os.getenv("MQTT_USER", "")
+MQTT_PASS   = os.getenv("MQTT_PASS", "")
 TOPIC_TELEMETRY = "smartbin/+/telemetry"
-TOPIC_EVENT = "smartbin/+/event"
+TOPIC_EVENT     = "smartbin/+/event"
 
 
 async def mqtt_loop(broadcaster):
-    """Subscribe forever; persist + broadcast telemetry; trigger alerts."""
-    while True:
+    """Start a paho-mqtt client in a daemon thread; keep this coroutine alive."""
+    loop = asyncio.get_event_loop()
+
+    def on_connect(client, userdata, flags, rc, props=None):
+        if rc == 0:
+            print(f"[mqtt] connected to {BROKER_HOST}:{BROKER_PORT}")
+            client.subscribe(TOPIC_TELEMETRY)
+            client.subscribe(TOPIC_EVENT)
+        else:
+            print(f"[mqtt] connect failed rc={rc}")
+
+    def on_message(client, userdata, msg):
+        topic = msg.topic
         try:
-            async with aiomqtt.Client(hostname=BROKER_HOST, port=BROKER_PORT) as client:
-                print(f"[mqtt] connected to {BROKER_HOST}:{BROKER_PORT}")
-                await client.subscribe(TOPIC_TELEMETRY)
-                await client.subscribe(TOPIC_EVENT)
-                async for message in client.messages:
-                    await handle_message(message, broadcaster)
-        except Exception as e:
-            print(f"[mqtt] connection error: {e}; retrying in 5s")
-            await asyncio.sleep(5)
+            payload = json.loads(msg.payload.decode())
+        except Exception:
+            return
+        parts = topic.split("/")
+        if len(parts) < 3:
+            return
+        bin_id, kind = parts[1], parts[2]
+        if kind == "telemetry":
+            asyncio.run_coroutine_threadsafe(
+                handle_telemetry(bin_id, payload, broadcaster), loop
+            )
+        elif kind == "event":
+            asyncio.run_coroutine_threadsafe(
+                broadcaster({"event": "device_event", "bin_id": bin_id, "data": payload}),
+                loop,
+            )
 
+    def run_paho():
+        while True:
+            try:
+                client = paho.Client(
+                    callback_api_version=paho.CallbackAPIVersion.VERSION2,
+                    client_id="smartbin-backend-sub",
+                )
+                client.on_connect = on_connect
+                client.on_message = on_message
+                if MQTT_USER:
+                    client.username_pw_set(MQTT_USER, MQTT_PASS)
+                # Use TLS when connecting to port 8883 (HiveMQ Cloud etc.)
+                if BROKER_PORT == 8883:
+                    import ssl
+                    client.tls_set(cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLS)
+                client.connect(BROKER_HOST, BROKER_PORT, keepalive=60)
+                client.loop_forever()
+            except Exception as e:
+                print(f"[mqtt] error: {e}; reconnecting in 5s")
+                time.sleep(5)
 
-async def handle_message(message, broadcaster):
-    topic = str(message.topic)
-    try:
-        payload = json.loads(message.payload.decode())
-    except Exception:
-        return
+    t = threading.Thread(target=run_paho, daemon=True, name="mqtt-paho")
+    t.start()
 
-    parts = topic.split("/")
-    if len(parts) < 3:
-        return
-    bin_id, kind = parts[1], parts[2]
-
-    if kind == "telemetry":
-        await handle_telemetry(bin_id, payload, broadcaster)
-    elif kind == "event":
-        await broadcaster({"event": "device_event", "bin_id": bin_id, "data": payload})
+    # Keep coroutine alive so the asyncio task isn't immediately cancelled
+    while True:
+        await asyncio.sleep(3600)
 
 
 async def handle_telemetry(bin_id: str, payload: dict, broadcaster):
     db = SessionLocal()
     try:
-        # auto-register unknown bin (for demo simplicity)
         b = db.query(Bin).filter(Bin.id == bin_id).first()
         if b is None:
             b = Bin(
@@ -81,7 +109,6 @@ async def handle_telemetry(bin_id: str, payload: dict, broadcaster):
         )
         db.add(t); db.commit()
 
-        # broadcast to websocket clients
         await broadcaster({
             "event": "telemetry",
             "bin_id": bin_id,
@@ -95,7 +122,6 @@ async def handle_telemetry(bin_id: str, payload: dict, broadcaster):
             },
         })
 
-        # rules
         triggered = evaluate_telemetry(bin_id, t.fill_pct, t.battery_pct)
         for a in triggered:
             db_alert = Alert(**a)

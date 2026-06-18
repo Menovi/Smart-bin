@@ -91,13 +91,17 @@ export function renderDepots(depots) {
 
 // ── BIN MARKERS ─────────────────────────────────────
 
-export function renderAllBinMarkers(bins, depots) {
+export function renderAllBinMarkers(bins, depots, onClickCb, onContextCb) {
   Object.values(binMarkers).forEach(m => map.removeLayer(m));
   Object.keys(binMarkers).forEach(k => delete binMarkers[k]);
-  bins.forEach(b => addBinMarker(b, depots));
+  bins.forEach(b => addBinMarker(b, depots, onClickCb, onContextCb));
 }
 
-export function addBinMarker(bin, depots, onClickCb) {
+export function deleteBinMarker(binId) {
+  if (binMarkers[binId]) { map.removeLayer(binMarkers[binId]); delete binMarkers[binId]; }
+}
+
+export function addBinMarker(bin, depots, onClickCb, onContextCb) {
   const col         = fillColor(bin.fill);
   const glow        = fillGlow(bin.fill);
   const depot       = depots?.find(d => d.id === bin.depotId);
@@ -130,12 +134,13 @@ export function addBinMarker(bin, depots, onClickCb) {
     </div>`);
 
   if (onClickCb) marker.on('click', () => onClickCb(bin.id));
+  if (onContextCb) marker.on('contextmenu', (e) => { L.DomEvent.stop(e); onContextCb(bin.id, e.originalEvent); });
   binMarkers[bin.id] = marker;
 }
 
-export function refreshBinMarker(bin, depots, onClickCb) {
+export function refreshBinMarker(bin, depots, onClickCb, onContextCb) {
   if (binMarkers[bin.id]) { map.removeLayer(binMarkers[bin.id]); delete binMarkers[bin.id]; }
-  addBinMarker(bin, depots, onClickCb);
+  addBinMarker(bin, depots, onClickCb, onContextCb);
 }
 
 export function openBinPopup(id) {

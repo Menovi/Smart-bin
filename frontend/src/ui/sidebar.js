@@ -12,16 +12,36 @@ import { fillColor, statusInfo } from '../utils/colors.js';
 
 // ── DEPOT LEGEND ────────────────────────────────────
 
-export function renderDepotLegend(depots) {
+export function renderDepotLegend(depots, onDeleteCb, onEditCb) {
   document.getElementById('depotLegend').innerHTML = depots
-    .map(
-      d => `<div class="depot-leg">
-              <div class="depot-leg-sq" style="background:${d.color};"></div>
-              <span style="font-size:12px;">${d.name}</span>
-              <span style="margin-left:auto;font-size:10px;font-family:var(--fm);color:var(--muted);">${d.radius}km</span>
-            </div>`
-    )
+    .map(d => `
+      <div class="depot-leg" style="align-items:center;">
+        <div class="depot-leg-sq" style="background:${d.color};flex-shrink:0;"></div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${d.name}</div>
+          <div style="font-size:9px;font-family:var(--fm);color:var(--muted);">${d.trucks ?? 2} trucks · ${d.truckCapacity ?? 1000}L · ${d.radius}km</div>
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0;margin-left:4px;">
+          <button class="depot-edit-btn" data-id="${d.id}"
+            style="padding:2px 6px;background:transparent;border:1px solid var(--border);border-radius:4px;
+                   color:var(--muted);font-size:10px;cursor:pointer;font-family:Syne;">✎</button>
+          <button class="depot-del-btn" data-id="${d.id}"
+            style="padding:2px 6px;background:transparent;border:1px solid rgba(255,23,68,.3);border-radius:4px;
+                   color:#ff1744;font-size:10px;cursor:pointer;font-family:Syne;">✕</button>
+        </div>
+      </div>`)
     .join('');
+
+  if (onDeleteCb) {
+    document.querySelectorAll('.depot-del-btn').forEach(btn =>
+      btn.addEventListener('click', () => onDeleteCb(btn.dataset.id))
+    );
+  }
+  if (onEditCb) {
+    document.querySelectorAll('.depot-edit-btn').forEach(btn =>
+      btn.addEventListener('click', () => onEditCb(btn.dataset.id))
+    );
+  }
 }
 
 // ── BIN LIST ────────────────────────────────────────

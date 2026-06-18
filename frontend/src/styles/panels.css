@@ -14,7 +14,7 @@
 
 /* ── DASHBOARD ── */
 #panel-dashboard { flex-direction: column; overflow: hidden; }
-.dash-inner { flex: 1; overflow-y: auto; padding: 22px; }
+.dash-inner { flex: 1; overflow-y: auto; padding: 22px; min-height: 0; }
 
 /* KPI row */
 .kpi-row {
@@ -159,7 +159,7 @@
 
 /* ── NOTIFICATIONS ── */
 #panel-notifications { flex-direction: column; overflow: hidden; }
-.notif-inner  { flex: 1; overflow-y: auto; padding: 22px; }
+.notif-inner  { flex: 1; overflow-y: auto; padding: 22px; min-height: 0; }
 
 .ns-hdr  { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; margin-top: 6px; }
 .ns-hdr:first-child { margin-top: 0; }
@@ -217,7 +217,7 @@
 
 /* ── ANALYTICS ── */
 #panel-analytics { flex-direction: column; overflow: hidden; }
-.ana-inner { flex: 1; overflow-y: auto; padding: 22px; }
+.ana-inner { flex: 1; overflow-y: auto; padding: 22px; min-height: 0; }
 
 .ana-city-label {
   font-size: 11px;

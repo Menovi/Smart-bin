@@ -47,3 +47,13 @@ async def detect(
 @router.get("/recent", response_model=List[DetectionOut])
 def recent(limit: int = 20, db: Session = Depends(get_db)):
     return db.query(Detection).order_by(desc(Detection.timestamp)).limit(limit).all()
+
+
+@router.delete("/{detection_id}")
+def delete_detection(detection_id: int, db: Session = Depends(get_db)):
+    d = db.query(Detection).filter(Detection.id == detection_id).first()
+    if not d:
+        from fastapi import HTTPException
+        raise HTTPException(404)
+    db.delete(d); db.commit()
+    return {"ok": True}

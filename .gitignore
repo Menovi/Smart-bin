@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.env
+
+# Database — ephemeral on Render, don't commit
+*.db
+*.sqlite
+
+# Frontend dependencies
+node_modules/
+frontend/dist/
+
+# YOLO model — 19MB, included in repo (under GitHub's 100MB limit)
+# backend/models/*.pt
+
+# Detection uploads — runtime images, not source code
+backend/uploads/
+
+# OS
+.DS_Store
+Thumbs.db

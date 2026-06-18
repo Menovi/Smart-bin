@@ -67,6 +67,17 @@ class Alert(Base):
     bin = relationship("Bin", back_populates="alerts")
 
 
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String, unique=True, nullable=False, index=True)
+    password_hash = Column(String, nullable=False)
+    name = Column(String, nullable=False)
+    role = Column(String, default="citizen")          # "municipality" | "citizen"
+    region = Column(String, nullable=True)             # e.g. "Bangalore Municipal Corporation"
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
 

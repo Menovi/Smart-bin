@@ -1,5 +1,7 @@
 // src/api/ws.js — WebSocket to FastAPI
-const WS_URL = "ws://localhost:8000/ws";
+// Derive WS URL from the REST base URL — handles both local and production
+const _api = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const WS_URL = _api.replace(/^http/, "ws") + "/ws";
 const handlers = new Map();
 let socket = null, retries = 0;
 

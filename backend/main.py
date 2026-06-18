@@ -20,6 +20,9 @@ from routes import bins as bins_router
 from routes import detections as detections_router
 from routes import alerts as alerts_router
 from routes import routing as routing_router
+from routes import prototype as prototype_router
+from routes import simulator as simulator_router
+from routes import auth as auth_router
 
 # ---- WebSocket hub --------------------------------------------------------
 ws_clients: Set[WebSocket] = set()
@@ -43,6 +46,7 @@ async def lifespan(app: FastAPI):
     init_db()
     # wire detection broadcaster
     detections_router.broadcast_ref["fn"] = broadcast
+    prototype_router.broadcast_ref["fn"] = broadcast
     task = asyncio.create_task(mqtt_loop(broadcast))
     print("[app] startup complete")
     yield
@@ -57,7 +61,9 @@ app.include_router(bins_router.router)
 app.include_router(detections_router.router)
 app.include_router(alerts_router.router)
 app.include_router(routing_router.router)
-
+app.include_router(prototype_router.router)
+app.include_router(simulator_router.router)
+app.include_router(auth_router.router)
 # expose uploaded images
 import os
 os.makedirs("uploads", exist_ok=True)

@@ -11,9 +11,44 @@ import { fillColor, statusInfo } from '../utils/colors.js';
 import { TRUCKS_PER_DEPOT }      from '../config/constants.js';
 
 export function renderDashboard(bins, depots) {
+  if (!bins.length) {
+    renderEmptyState();
+    return;
+  }
   renderKPIs(bins);
   renderDepotFleet(bins, depots);
   renderDataTable(bins, depots);
+}
+
+function renderEmptyState() {
+  document.getElementById('kpiRow').innerHTML = '';
+  document.getElementById('depotFleet').innerHTML = '';
+  document.getElementById('dataTbl').innerHTML = `
+    <div style="
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:60px 24px;text-align:center;gap:16px;
+    ">
+      <div style="font-size:48px;">🗑️</div>
+      <div style="font-size:20px;font-weight:800;color:var(--text);">No bins yet in your area</div>
+      <div style="font-size:13px;color:var(--muted);max-width:360px;line-height:1.7;">
+        Go to the <strong style="color:var(--accent)">Live Map</strong> tab and click
+        <strong style="color:var(--accent)">＋ Place Bin</strong> to start adding
+        bins to your municipality. Your dashboard will update automatically.
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button onclick="document.querySelector('[data-tab=map]').click()"
+          style="padding:10px 22px;background:var(--accent);color:#000;border:none;
+                 border-radius:8px;font-family:Syne;font-weight:700;font-size:13px;cursor:pointer;">
+          🗺️ Go to Map
+        </button>
+        <button onclick="document.getElementById('btnDemo').click();document.querySelector('[data-tab=map]').click()"
+          style="padding:10px 22px;background:rgba(124,77,255,.15);color:var(--accent2);
+                 border:1px solid rgba(124,77,255,.4);border-radius:8px;font-family:Syne;
+                 font-weight:700;font-size:13px;cursor:pointer;">
+          🎬 View Demo
+        </button>
+      </div>
+    </div>`;
 }
 
 // ── KPI CARDS ───────────────────────────────────────
@@ -23,7 +58,7 @@ function renderKPIs(bins) {
   const high      = bins.filter(b => b.fill >= 75 && b.fill < 90).length;
   const moderate  = bins.filter(b => b.fill >= 60 && b.fill < 75).length;
   const ok        = bins.filter(b => b.fill < 60).length;
-  const avg       = Math.round(bins.reduce((s, b) => s + b.fill, 0) / bins.length);
+  const avg       = bins.length ? Math.round(bins.reduce((s, b) => s + b.fill, 0) / bins.length) : 0;
   const extended  = bins.filter(b => b.extended).length;
 
   document.getElementById('kpiRow').innerHTML = `

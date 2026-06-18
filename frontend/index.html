@@ -51,20 +51,26 @@
 
     <!-- ── TABS ── -->
     <div class="tabs">
-      <button class="tab-btn active" data-tab="map">🗺️ Live Map</button>
-      <button class="tab-btn" data-tab="iotlive">📡 IoT Live</button>
+      <button class="tab-btn" data-tab="map">🗺️ Live Map</button>
+      <button class="tab-btn" data-tab="iotlive">🔌 Smart Bin</button>
       <button class="tab-btn" data-tab="detection">🧠 Detection</button>
-      <button class="tab-btn" data-tab="dashboard">📊 Dashboard</button>
+      <button class="tab-btn active" data-tab="dashboard">📊 Dashboard</button>
       <button class="tab-btn" data-tab="notifications">
         🔔 Alerts <span class="nbadge" id="nb">0</span>
       </button>
       <button class="tab-btn" data-tab="analytics">📈 Analytics</button>
     </div>
 
+    <!-- ── DEMO BANNER ── -->
+    <div class="demo-banner" id="demoBanner">
+      🎬 Demo Mode — viewing sample data for Bangalore (120 bins, 3 depots)
+      <button class="demo-banner-exit" id="demoBannerExit">Exit Demo</button>
+    </div>
+
     <!-- ── CONTENT ── -->
     <div class="content">
       <!-- MAP TAB -->
-      <div class="tab-panel active" id="panel-map">
+      <div class="tab-panel" id="panel-map">
         <div id="map">
           <div id="mapLoading">
             <div class="spin-ring"></div>
@@ -73,9 +79,11 @@
           <div class="add-hint" id="addHint">Click anywhere to place a bin</div>
         </div>
         <div class="map-sidebar">
+          <div id="sidebar-top">
           <div class="ss">
             <div class="st">Depots &amp; Coverage</div>
             <div id="depotLegend"></div>
+            <button class="btn-add" id="btnAddDepot" style="margin-top:8px;">＋ Add Depot</button>
           </div>
           <div class="ss">
             <div class="st">Fill Level</div>
@@ -130,6 +138,11 @@
             </div>
           </div>
           <div class="ss">
+            <div class="st">Mode</div>
+            <button class="btn-demo" id="btnDemo">🎬 Load Demo</button>
+            <div class="demo-hint" id="demoHint">Place your own bins using the button below, or load the demo to explore all features.</div>
+          </div>
+          <div class="ss">
             <div class="st">Route Controls</div>
             <button class="btn-add" id="btnAdd">＋ Place Bin</button>
             <button class="btn-primary" id="btnGreedy">
@@ -157,6 +170,7 @@
             <div class="st">Route Summary</div>
             <div class="route-info" id="routeSum"></div>
           </div>
+          </div><!-- /sidebar-top -->
           <div class="st sidebar-bins-label">Bins (sorted by fill)</div>
           <div class="bin-list" id="binList"></div>
           <div class="refresh-bar">
@@ -167,14 +181,10 @@
       </div>
 
       <!-- DASHBOARD TAB -->
-      <div class="tab-panel" id="panel-dashboard">
+      <div class="tab-panel active" id="panel-dashboard">
         <div class="dash-inner">
           <div class="dash-hdr">
             <div class="dash-title">Fleet Dashboard</div>
-            <button class="sim-btn" id="simBtn">
-              <span id="simI" style="display: inline-block">⟳</span> Simulate
-              Fill Change
-            </button>
           </div>
           <div class="kpi-row" id="kpiRow"></div>
           <div class="depot-fleet" id="depotFleet"></div>
@@ -214,7 +224,7 @@
         </div>
       </div>
 
-      <!-- IOT LIVE TAB -->
+      <!-- SMART BIN TAB -->
       <div class="tab-panel" id="panel-iotlive"></div>
 
       <!-- DETECTION TAB -->

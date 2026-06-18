@@ -16,7 +16,7 @@
 /* ── LOADING OVERLAY ── */
 #mapLoading {
   position: absolute;
-  inset: 0 310px 0 0;
+  inset: 0 0 0 0;
   background: #0a0e14;
   display: flex;
   flex-direction: column;
@@ -66,10 +66,19 @@
   width: 310px;
   flex-shrink: 0;
   background: var(--surface);
-  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  order: -1;
+}
+
+/* Scrollable top controls — caps at 60% of sidebar height */
+#sidebar-top {
+  overflow-y: auto;
+  flex-shrink: 0;
+  max-height: 60%;
+  min-height: 0;
 }
 
 /* Sidebar section */
@@ -186,6 +195,56 @@
 }
 .btn-add:hover, .btn-add.active { background: rgba(0,229,255,.07); }
 
+.btn-demo {
+  width: 100%;
+  padding: 9px;
+  background: rgba(124,77,255,.12);
+  border: 1px solid rgba(124,77,255,.4);
+  border-radius: 7px;
+  color: var(--accent2);
+  font-family: var(--fd);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .2s;
+  margin-bottom: 8px;
+}
+.btn-demo:hover        { background: rgba(124,77,255,.2); border-color: var(--accent2); }
+.btn-demo.demo-active  { background: rgba(124,77,255,.25); border-color: var(--accent2); color: #fff; }
+
+.demo-hint {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* Demo mode banner shown across all tabs */
+.demo-banner {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 16px;
+  background: rgba(124,77,255,.12);
+  border-bottom: 1px solid rgba(124,77,255,.3);
+  font-size: 11px;
+  color: var(--accent2);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.demo-banner.vis { display: flex; }
+.demo-banner-exit {
+  margin-left: auto;
+  padding: 2px 10px;
+  border: 1px solid rgba(124,77,255,.4);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--accent2);
+  font-family: var(--fd);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* ── PROGRESS BAR ── */
 .progress-wrap   { margin-top: 8px; }
 .progress-label  {
@@ -218,7 +277,7 @@
 .ri { color: var(--accent); font-weight: 700; }
 
 /* ── BIN LIST ── */
-.bin-list { flex: 1; overflow-y: auto; }
+.bin-list { flex: 1; overflow-y: auto; min-height: 0; }
 
 .bli {
   display: flex;
