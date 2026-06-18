@@ -1,104 +1,205 @@
-/**
- * SmartBin ESP32 firmware — HC-SR04 fill sensor + battery + WiFi + MQTT
- *
- * Hardware:
- *   ESP32 DevKit
- *   HC-SR04 ultrasonic sensor: TRIG=GPIO5, ECHO=GPIO18
- *   Battery voltage divider on GPIO34 (ADC1_CH6)
- *
- * Libraries (Arduino Library Manager):
- *   - PubSubClient by Nick O'Leary
- *   - ArduinoJson by Benoit Blanchon
- */
 #include <WiFi.h>
-#include <PubSubClient.h>
+#include <HTTPClient.h>
 #include <ArduinoJson.h>
 
-// ---- USER CONFIG -----------------------------------------------------------
-const char* WIFI_SSID = "your-ssid";
-const char* WIFI_PASS = "your-password";
-const char* MQTT_HOST = "broker.hivemq.com";
-const uint16_t MQTT_PORT = 1883;
-const char* BIN_ID    = "BIN-001";
-const char* BIN_NAME  = "Library Front";
-const float BIN_LAT   = 13.0103;
-const float BIN_LNG   = 74.7940;
-const float BIN_CAPACITY_CM = 80.0;
-const uint32_t PUBLISH_INTERVAL_MS = 5000;
+// ── WiFi credentials (your phone hotspot) ──────────────────
+const char* WIFI_SSID     = "YOUR_HOTSPOT_NAME";
+const char* WIFI_PASSWORD = "YOUR_HOTSPOT_PASSWORD";
 
-// ---- PINS ------------------------------------------------------------------
-const uint8_t TRIG_PIN = 5;
-const uint8_t ECHO_PIN = 18;
-const uint8_t BATT_PIN = 34;     // ADC1_CH6 with 1:2 divider
+// ── Backend URL ────────────────────────────────────────────
+const char* SERVER_URL = "https://smartbin-api.onrender.com/api/prototype/reading";
 
-// ---- GLOBALS ---------------------------------------------------------------
-WiFiClient espClient;
-PubSubClient mqtt(espClient);
-char topic_telemetry[64];
+// ── Pin definitions ────────────────────────────────────────
+#define TRIG_PIN  5
+#define ECHO_PIN  18
+#define RED_LED   25
+#define GREEN_LED 26
 
-float readDistanceCm() {
-  digitalWrite(TRIG_PIN, LOW);  delayMicroseconds(2);
-  digitalWrite(TRIG_PIN, HIGH); delayMicroseconds(10);
-  digitalWrite(TRIG_PIN, LOW);
-  long dur = pulseIn(ECHO_PIN, HIGH, 30000UL);
-  if (dur == 0) return BIN_CAPACITY_CM;     // out of range -> empty
-  return dur * 0.0343f / 2.0f;
+// ── Config ─────────────────────────────────────────────────
+const float BIN_DEPTH_CM       = 30.0;
+const int   CHECK_INTERVAL_SEC = 30;    // Deep sleep duration between readings
+const int   WIFI_TIMEOUT_MS    = 15000;
+
+// ───────────────────────────────────────────────────────────
+
+void setLEDs(int red, int green) {
+  digitalWrite(RED_LED, red);
+  digitalWrite(GREEN_LED, green);
 }
 
-float readBatteryPct() {
-  // assumes 4.2V full -> 3.3V cutoff, with 1:2 divider feeding ADC
-  int raw = analogRead(BATT_PIN);
-  float v = raw * 3.3f / 4095.0f * 2.0f;
-  float pct = (v - 3.3f) / (4.2f - 3.3f) * 100.0f;
-  if (pct < 0) pct = 0; if (pct > 100) pct = 100;
+void updateLEDs(float fillPct) {
+  if (fillPct < 70) {
+    setLEDs(LOW, HIGH);   // Green: normal
+  } else if (fillPct < 90) {
+    setLEDs(HIGH, HIGH);  // Both: warning
+  } else if (fillPct < 100) {
+    setLEDs(HIGH, LOW);   // Red: critical
+  } else {
+    for (int i = 0; i < 6; i++) {
+      setLEDs(HIGH, LOW);
+      delay(250);
+      setLEDs(LOW, LOW);
+      delay(250);
+    }
+  }
+}
+
+float measureDistance() {
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+  long duration = pulseIn(ECHO_PIN, HIGH, 30000);
+  if (duration == 0) return -1;
+  return duration * 0.0343 / 2;
+}
+
+float getStableFillPercent(float* distOut) {
+  float total = 0;
+  int valid = 0;
+  for (int i = 0; i < 5; i++) {
+    float d = measureDistance();
+    if (d > 2 && d < 400) { total += d; valid++; }
+    delay(60);
+  }
+  if (valid == 0) { *distOut = -1; return -1; }
+  float avg = total / valid;
+  *distOut = avg;
+  float pct = ((BIN_DEPTH_CM - avg) / BIN_DEPTH_CM) * 100;
+  if (pct < 0) pct = 0;
+  if (pct > 100) pct = 100;
   return pct;
 }
 
-void wifiConnect() {
-  WiFi.mode(WIFI_STA); WiFi.begin(WIFI_SSID, WIFI_PASS);
-  while (WiFi.status() != WL_CONNECTED) { delay(300); Serial.print("."); }
-  Serial.println(); Serial.print("IP "); Serial.println(WiFi.localIP());
+String getStatus(float pct) {
+  if (pct >= 100) return "OVERFLOW";
+  if (pct >= 90)  return "CRITICAL";
+  if (pct >= 70)  return "WARNING";
+  return "NORMAL";
 }
 
-void mqttConnect() {
-  mqtt.setServer(MQTT_HOST, MQTT_PORT);
-  while (!mqtt.connected()) {
-    String cid = String("smartbin-") + BIN_ID;
-    if (mqtt.connect(cid.c_str())) Serial.println("MQTT ok");
-    else { Serial.print("MQTT rc="); Serial.println(mqtt.state()); delay(2000); }
+bool connectWiFi() {
+  Serial.print("[wifi] Connecting to ");
+  Serial.println(WIFI_SSID);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+  unsigned long start = millis();
+  while (WiFi.status() != WL_CONNECTED) {
+    if (millis() - start > WIFI_TIMEOUT_MS) {
+      Serial.println("\n[wifi] Timeout — no connection");
+      return false;
+    }
+    delay(500);
+    Serial.print(".");
   }
+  Serial.print("\n[wifi] Connected, IP: ");
+  Serial.println(WiFi.localIP());
+  return true;
+}
+
+bool sendTelemetry(float fillPct, float distCm, String status) {
+  HTTPClient http;
+  http.begin(SERVER_URL);
+  http.addHeader("Content-Type", "application/json");
+
+  // Payload matches PrototypeReading schema in backend/routes/prototype.py
+  StaticJsonDocument<200> doc;
+  doc["fill_pct"]    = fillPct;
+  doc["status"]      = status;
+  doc["distance_cm"] = distCm;
+  doc["battery_pct"] = 100.0;  // No battery sensor on this board
+
+  String body;
+  serializeJson(doc, body);
+
+  Serial.print("[http] POST → ");
+  Serial.println(body);
+
+  int code = http.POST(body);
+  String response = http.getString();
+  http.end();
+
+  if (code == 200) {
+    Serial.print("[http] OK 200 — ");
+    Serial.println(response);
+    return true;
+  } else {
+    Serial.print("[http] Failed, HTTP ");
+    Serial.print(code);
+    Serial.print(" — ");
+    Serial.println(response);
+    return false;
+  }
+}
+
+void goToSleep() {
+  setLEDs(LOW, LOW);
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF);
+  Serial.print("[sleep] Deep sleep for ");
+  Serial.print(CHECK_INTERVAL_SEC);
+  Serial.println("s...");
+  Serial.flush();
+  esp_sleep_enable_timer_wakeup((uint64_t)CHECK_INTERVAL_SEC * 1000000ULL);
+  esp_deep_sleep_start();
 }
 
 void setup() {
   Serial.begin(115200);
-  pinMode(TRIG_PIN, OUTPUT); pinMode(ECHO_PIN, INPUT);
-  snprintf(topic_telemetry, sizeof(topic_telemetry), "smartbin/%s/telemetry", BIN_ID);
-  wifiConnect(); mqttConnect();
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  pinMode(RED_LED, OUTPUT);
+  pinMode(GREEN_LED, OUTPUT);
+
+  delay(500);
+  Serial.println("\n=== Smart Bin Awake ===");
+
+  // 1. Take sensor reading
+  float distCm;
+  float fill = getStableFillPercent(&distCm);
+
+  if (fill < 0) {
+    Serial.println("[sensor] Error — check HC-SR04 wiring");
+    setLEDs(LOW, LOW);
+    goToSleep();
+    return;
+  }
+
+  String status = getStatus(fill);
+  Serial.print("[sensor] Fill: ");
+  Serial.print(fill, 1);
+  Serial.print("%  Dist: ");
+  Serial.print(distCm, 1);
+  Serial.print("cm  Status: ");
+  Serial.println(status);
+
+  // 2. Show fill level on LEDs
+  updateLEDs(fill);
+
+  // 3. Connect to WiFi and POST to backend
+  if (connectWiFi()) {
+    bool sent = sendTelemetry(fill, distCm, status);
+    if (!sent) {
+      // 2 red blinks = HTTP send failed (server reachable but error)
+      for (int i = 0; i < 2; i++) {
+        setLEDs(HIGH, LOW); delay(300);
+        setLEDs(LOW, LOW);  delay(300);
+      }
+    }
+  } else {
+    // 4 alternating blinks = WiFi failed
+    for (int i = 0; i < 4; i++) {
+      setLEDs(HIGH, HIGH); delay(200);
+      setLEDs(LOW, LOW);   delay(200);
+    }
+  }
+
+  delay(2000);  // Keep LEDs visible briefly before sleep
+  goToSleep();
 }
 
 void loop() {
-  if (!mqtt.connected()) mqttConnect();
-  mqtt.loop();
-
-  static uint32_t last = 0;
-  if (millis() - last >= PUBLISH_INTERVAL_MS) {
-    last = millis();
-    float d = readDistanceCm();
-    if (d > BIN_CAPACITY_CM) d = BIN_CAPACITY_CM;
-    float fill = (1.0f - d / BIN_CAPACITY_CM) * 100.0f;
-    if (fill < 0) fill = 0; if (fill > 100) fill = 100;
-    float batt = readBatteryPct();
-
-    StaticJsonDocument<256> doc;
-    doc["name"] = BIN_NAME;
-    doc["lat"] = BIN_LAT; doc["lng"] = BIN_LNG;
-    doc["capacity_cm"] = BIN_CAPACITY_CM;
-    doc["distance_cm"] = d;
-    doc["fill_pct"] = fill;
-    doc["battery_pct"] = batt;
-    doc["rssi"] = WiFi.RSSI();
-    char buf[256]; size_t n = serializeJson(doc, buf);
-    mqtt.publish(topic_telemetry, (uint8_t*)buf, n);
-    Serial.print("pub "); Serial.println(buf);
-  }
+  // Never reached — deep sleep restarts setup() on wake
 }
