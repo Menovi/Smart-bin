@@ -7,8 +7,10 @@
 
 import L                    from 'leaflet';
 import { fillColor, fillGlow, statusInfo } from '../utils/colors.js';
+import { priorityScore, priorityLabel }    from '../utils/priority.js';
 
 let map;
+let tileLayer;
 const binMarkers    = {};
 const depotMarkers  = [];
 const coverageCircles = [];
@@ -17,12 +19,24 @@ let   truckMarkers  = [];
 
 // ── INIT ────────────────────────────────────────────
 
+function _tileUrl(dark) {
+  return dark
+    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+}
+
+export function setMapTheme(dark) {
+  if (!map || !tileLayer) return;
+  map.removeLayer(tileLayer);
+  tileLayer = L.tileLayer(_tileUrl(dark), { maxZoom: 19 }).addTo(map);
+  map.getContainer().style.background = dark ? '#0d1520' : '#cdd5e0';
+}
+
 export function initMap(center, onMapClick) {
   map = L.map('map', { zoomControl: false, attributionControl: false }).setView(center, 13);
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    maxZoom: 19,
-  }).addTo(map);
+  const isDark = document.documentElement.dataset.theme === 'dark';
+  tileLayer = L.tileLayer(_tileUrl(isDark), { maxZoom: 19 }).addTo(map);
 
   L.control.zoom({ position: 'bottomright' }).addTo(map);
   map.on('click', onMapClick);
@@ -110,8 +124,12 @@ export function addBinMarker(bin, depots, onClickCb, onContextCb) {
     ? `border: 2px dashed ${dColor};`
     : `border: 2.5px solid ${dColor}55;`;
 
+  const hasLitter = (bin.litterCount ?? 0) > 0;
   const icon = L.divIcon({
-    html: `<div class="bm" style="background:${col};box-shadow:0 0 9px ${glow},0 2px 6px rgba(0,0,0,.5);${borderStyle}">${bin.fill}%</div>`,
+    html: `<div class="bm-wrap">
+      ${hasLitter ? '<div class="litter-ring"></div>' : ''}
+      <div class="bm" style="background:${col};box-shadow:0 0 9px ${glow},0 2px 6px rgba(0,0,0,.5);${borderStyle}">${bin.fill}%</div>
+    </div>`,
     className: '', iconSize: [34, 34], iconAnchor: [17, 17],
   });
 
@@ -121,16 +139,22 @@ export function addBinMarker(bin, depots, onClickCb, onContextCb) {
     ? `<div class="pu-row"><span>Dispatch</span><span style="color:#ffea00;">⚠ Extended</span></div>`
     : '';
 
+  const ps   = priorityScore(bin);
+  const pl   = priorityLabel(ps);
+  const litter = bin.litterCount ?? 0;
   marker.bindPopup(`
     <div class="pu">
       <div class="pu-id">${bin.id}</div>
       <div class="pu-row"><span>Zone</span><span>${bin.zone}</span></div>
       <div class="pu-row"><span>Fill</span><span style="color:${col};font-weight:800;">${bin.fill}%</span></div>
+      <div class="pu-row"><span>Litter nearby</span><span style="color:${litter>0?'#ff9800':'var(--muted)'}">${litter} detected</span></div>
+      <div class="pu-row"><span>Priority</span><span style="color:${pl.color};font-weight:800;">${pl.label} (${(ps*100).toFixed(0)})</span></div>
       <div class="pu-row"><span>Status</span><span class="sch ${cls}">${label}</span></div>
       <div class="pu-row"><span>Depot</span><span style="color:${dColor};">${bin.depotId ?? '—'}</span></div>
       ${extTag}
       <div class="pu-row"><span>Last collected</span><span>${bin.lastCollected}</span></div>
       <div class="pu-bar"><div class="pu-bi" style="width:${bin.fill}%;background:${col};"></div></div>
+      <button class="pu-del" onclick="window.__sbDeleteBin('${bin.id}')">&#128465; Delete Bin</button>
     </div>`);
 
   if (onClickCb) marker.on('click', () => onClickCb(bin.id));

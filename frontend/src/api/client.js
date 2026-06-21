@@ -37,6 +37,14 @@ export async function deleteDetection(id) {
   await fetch(`${BASE}/api/detect/${id}`, { method: "DELETE" });
 }
 
+// Returns { bin_id: count } for litter detections in the last N hours
+export async function fetchLitterCounts(hours = 24) {
+  try {
+    const r = await fetch(`${BASE}/api/detect/counts?hours=${hours}`);
+    return r.ok ? r.json() : {};
+  } catch { return {}; }
+}
+
 export async function authRegister({ email, password, name, role, region }) {
   const r = await fetch(`${BASE}/api/auth/register`, {
     method: "POST",

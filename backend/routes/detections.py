@@ -2,7 +2,8 @@
 from typing import Optional, List
 from fastapi import APIRouter, UploadFile, File, Form, Depends
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, func
+from datetime import datetime, timedelta
 
 from database import get_db, Detection, Alert
 from schemas import DetectionOut
@@ -47,6 +48,20 @@ async def detect(
 @router.get("/recent", response_model=List[DetectionOut])
 def recent(limit: int = 20, db: Session = Depends(get_db)):
     return db.query(Detection).order_by(desc(Detection.timestamp)).limit(limit).all()
+
+
+@router.get("/counts")
+def litter_counts(hours: int = 24, db: Session = Depends(get_db)):
+    """Return litter detection counts per bin_id for the last N hours.
+    Only counts detections where has_litter_outside=True."""
+    since = datetime.utcnow() - timedelta(hours=hours)
+    rows = (
+        db.query(Detection.bin_id, func.sum(Detection.num_detections).label("count"))
+        .filter(Detection.has_litter_outside == True, Detection.timestamp >= since, Detection.bin_id != None)
+        .group_by(Detection.bin_id)
+        .all()
+    )
+    return {row.bin_id: int(row.count) for row in rows}
 
 
 @router.delete("/{detection_id}")

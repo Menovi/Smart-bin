@@ -16,12 +16,13 @@
  */
 import { initIotLive } from './ui/iotLive.js';
 import { on as wsOn } from './api/ws.js';
-import { deleteBin } from './api/client.js';
+import { deleteBin, fetchLitterCounts } from './api/client.js';
 import 'leaflet/dist/leaflet.css';
 import './styles/main.css';
 import './styles/layout.css';
 import './styles/map.css';
 import './styles/panels.css';
+import './styles/responsive.css';
 
 // ── Config ──────────────────────────────────────────
 import { CITIES, TRUCKS_PER_DEPOT, AUTO_REFRESH_SECONDS, FILL_DRIFT_PROB } from './config/constants.js';
@@ -42,7 +43,7 @@ import {
   renderDepots, renderAllBinMarkers, addBinMarker,
   refreshBinMarker, deleteBinMarker, openBinPopup,
   drawPolyline, drawRouteStopMarker, placeTruckMarker,
-  clearRouteLayers, getAllBinLatLngs,
+  clearRouteLayers, getAllBinLatLngs, setMapTheme,
 } from './map/mapController.js';
 
 // ── Services ────────────────────────────────────────
@@ -74,6 +75,7 @@ let isRouting   = false;
 let addMode     = false;
 let binCounter  = 1;
 let countdown   = AUTO_REFRESH_SECONDS;
+let currentUserId = 'guest';
 
 // Demo mode: when true, bins/depots are the generated sample dataset
 let demoMode    = false;
@@ -85,19 +87,16 @@ let userDepots  = [];
 
 const DEPOT_COLORS = ['#7c4dff','#00bcd4','#ff9800','#00e676','#f44336','#2196f3','#e91e63','#ffeb3b'];
 
+function _binKey()   { return `sb_bins_${currentUserId}`; }
+function _depotKey() { return `sb_depots_${currentUserId}`; }
+
 function loadUserData() {
-  try {
-    const b = localStorage.getItem('sb_user_bins');
-    if (b) userBins = JSON.parse(b);
-  } catch { userBins = []; }
-  try {
-    const d = localStorage.getItem('sb_user_depots');
-    if (d) userDepots = JSON.parse(d);
-  } catch { userDepots = []; }
+  try { userBins   = JSON.parse(localStorage.getItem(_binKey())   || '[]'); } catch { userBins   = []; }
+  try { userDepots = JSON.parse(localStorage.getItem(_depotKey()) || '[]'); } catch { userDepots = []; }
 }
 function saveUserData() {
-  localStorage.setItem('sb_user_bins',   JSON.stringify(userBins));
-  localStorage.setItem('sb_user_depots', JSON.stringify(userDepots));
+  localStorage.setItem(_binKey(),   JSON.stringify(userBins));
+  localStorage.setItem(_depotKey(), JSON.stringify(userDepots));
 }
 
 // ════════════════════════════════════════════════════
@@ -111,6 +110,8 @@ function bootstrap() {
   demoDepots = generateDepots(currentCity);
   demoBins   = generateBins(currentCity);
   assignBinsToDepots(demoBins, demoDepots);
+  // Assign synthetic litter counts to demo bins so priority score is visible in demo
+  demoBins.forEach(b => { b.litterCount = Math.random() < 0.3 ? Math.floor(Math.random() * 20) : 0; });
 
   // User starts with their own area (from localStorage or generated defaults)
   if (!userDepots.length) userDepots = generateDepots(currentCity);
@@ -127,6 +128,16 @@ function bootstrap() {
   refreshAllUI();
   startRefreshLoop();
   wireEventListeners();
+
+  // Fetch litter counts from backend and attach to user bins (non-blocking)
+  fetchLitterCounts(24).then(counts => {
+    let changed = false;
+    userBins.forEach(b => {
+      const c = counts[b.id] ?? 0;
+      if (b.litterCount !== c) { b.litterCount = c; changed = true; }
+    });
+    if (changed) refreshAllUI();
+  });
 }
 
 // ════════════════════════════════════════════════════
@@ -156,6 +167,49 @@ function wireEventListeners() {
   document.getElementById('btnDemo').addEventListener('click', () => toggleDemoMode(!demoMode));
   document.getElementById('demoBannerExit').addEventListener('click', () => toggleDemoMode(false));
   document.getElementById('btnAddDepot').addEventListener('click', () => showDepotModal(null));
+
+  // ── Theme toggle ──────────────────────────────
+  const themeBtn = document.getElementById('themeToggle');
+  const savedTheme = localStorage.getItem('sb_theme') ?? 'dark';
+  _applyTheme(savedTheme);
+  themeBtn.addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    _applyTheme(next);
+    localStorage.setItem('sb_theme', next);
+  });
+
+  // ── Sidebar slide toggle ──────────────────────
+  const sidebarToggle = document.getElementById('sidebarToggle');
+  const mapSidebar    = document.getElementById('mapSidebar');
+  const sidebarScrim  = document.getElementById('sidebarScrim');
+
+  function _setSidebarCollapsed(collapsed) {
+    mapSidebar.classList.toggle('collapsed', collapsed);
+    sidebarToggle.innerHTML = collapsed ? '&#9654;' : '&#9664;';
+    if (sidebarScrim) sidebarScrim.classList.toggle('vis', !collapsed && window.innerWidth <= 640);
+  }
+
+  // Auto-collapse on mobile
+  if (window.innerWidth <= 640) _setSidebarCollapsed(true);
+
+  sidebarToggle.addEventListener('click', () => {
+    _setSidebarCollapsed(!mapSidebar.classList.contains('collapsed'));
+  });
+  if (sidebarScrim) {
+    sidebarScrim.addEventListener('click', () => _setSidebarCollapsed(true));
+  }
+
+  // Bin list collapsible (hidden by default, open on click)
+  const binListHeader  = document.getElementById('binListHeader');
+  const binListChevron = document.getElementById('binListChevron');
+  const binListEl      = document.getElementById('binList');
+  binListHeader.addEventListener('click', () => {
+    const open = binListEl.classList.toggle('open');
+    binListChevron.classList.toggle('open', open);
+    binListChevron.innerHTML = open ? '&#9650;' : '&#9660;';
+  });
+  // Start collapsed — show a down chevron to invite opening
+  binListChevron.innerHTML = '&#9660;';
 }
 
 // ════════════════════════════════════════════════════
@@ -792,6 +846,31 @@ function tick() {
   return new Promise(resolve => setTimeout(resolve, 0));
 }
 
+function _applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  const btn = document.getElementById('themeToggle');
+  if (!btn) return;
+  if (theme === 'dark') {
+    btn.innerHTML = '<span class="theme-toggle-icon">☀️</span><span>Light</span>';
+  } else {
+    btn.innerHTML = '<span class="theme-toggle-icon">🌙</span><span>Dark</span>';
+  }
+  setMapTheme(theme === 'dark');
+}
+
+// Global hook so Leaflet popup delete buttons can call back into app state
+window.__sbDeleteBin = async (binId) => {
+  const map = getMap();
+  if (map) map.closePopup();
+  deleteBinMarker(binId);
+  const idx = bins.findIndex(b => b.id === binId);
+  if (idx !== -1) bins.splice(idx, 1);
+  if (!demoMode) { userBins = bins; saveUserData(); }
+  try { await deleteBin(binId); } catch { /* local-only bin */ }
+  renderBinList(bins, depots, onBinClick);
+  refreshAllUI();
+};
+
 // ════════════════════════════════════════════════════
 // ENTRY — gate behind auth
 // ════════════════════════════════════════════════════
@@ -805,6 +884,7 @@ async function init() {
 }
 
 function startApp(user) {
+  currentUserId = user?.id ?? 'guest';
   injectUserBadge(user);
   bootstrap();
   initIotLive();

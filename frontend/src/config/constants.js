@@ -56,6 +56,11 @@ export const Q         = 100;    // pheromone deposit constant
 export const LNS_FRAC  = 0.25;   // fraction of route to destroy each iteration
 export const LNS_ITERS_FACTOR = 4; // LNS iters = min(80, binCount * factor)
 
+// ── PRIORITY SCORE WEIGHTS ───────────────────────────
+export const FILL_WEIGHT   = 0.7;  // weight for fill level (0–1)
+export const LITTER_WEIGHT = 0.3;  // weight for normalised litter count
+export const LITTER_CAP    = 15;   // litter detections at/above this = score 1.0
+
 // ── ILS PARAMETERS ──────────────────────────────────
 export const ILS_RESTARTS    = 3;
 export const ILS_ACCEPT_FRAC = 1.15; // accept perturbed solution if within 15% of best

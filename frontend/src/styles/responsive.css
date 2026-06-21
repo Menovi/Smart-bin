@@ -1,0 +1,118 @@
+/* ═══════════════════════════════════════════════
+   src/styles/responsive.css
+   Mobile & tablet breakpoints
+   ═══════════════════════════════════════════════ */
+
+/* ── TABLET  (≤ 1024px) ── */
+@media (max-width: 1024px) {
+  .map-sidebar { width: 260px; }
+  .kpi-row     { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ── MOBILE  (≤ 640px) ── */
+@media (max-width: 640px) {
+
+  /* ── TOPBAR ── */
+  .topbar {
+    padding: 0 10px;
+    height: 48px;
+    gap: 7px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+  .logo span    { display: none; }
+  .fleet-label  { display: none; }
+  .tdiv         { display: none; }
+  .city-sel     { padding: 4px 8px; font-size: 11px; }
+  .tbr          { gap: 5px; margin-left: auto; }
+  .pill         { padding: 3px 6px; font-size: 9px; gap: 3px; }
+  .pill .d      { width: 4px; height: 4px; }
+  .theme-toggle { padding: 4px 8px; font-size: 10px; }
+  .theme-toggle span:not(.theme-toggle-icon) { display: none; }
+
+  /* ── TABS ── */
+  .tabs {
+    padding: 0 6px;
+    gap: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    padding: 9px 10px;
+    font-size: 11px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* ── MAP SIDEBAR → slide-over overlay ── */
+  .map-sidebar-wrap {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    z-index: 400;
+    /* pointer-events managed by collapsed state */
+  }
+
+  .map-sidebar {
+    width: 280px;
+    height: 100%;
+    box-shadow: 4px 0 24px rgba(0,0,0,.35);
+  }
+  .map-sidebar.collapsed {
+    width: 0;
+    pointer-events: none;
+  }
+
+  .sidebar-toggle {
+    width: 22px;
+    height: 54px;
+    right: -22px;
+    font-size: 11px;
+    pointer-events: all;
+  }
+
+  /* Scrim behind open sidebar on mobile */
+  .sidebar-scrim {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,.35);
+    z-index: 399;
+  }
+  .sidebar-scrim.vis { display: block; }
+
+  /* ── MAP PANEL ── */
+  #panel-map { position: relative; overflow: hidden; }
+  #map { width: 100%; }
+
+  /* ── DASHBOARD ── */
+  .dash-inner   { padding: 14px; }
+  .kpi-row      { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+  .kpi          { padding: 12px; }
+  .kpi-val      { font-size: 24px; }
+  .depot-fleet  { grid-template-columns: 1fr; gap: 10px; margin-bottom: 14px; }
+
+  /* ── ANALYTICS ── */
+  .ana-inner  { padding: 14px; }
+  .ana-grid   { grid-template-columns: 1fr; }
+  .donut-wrap { flex-direction: column; align-items: center; }
+
+  /* ── NOTIFICATIONS ── */
+  .notif-inner { padding: 14px; }
+  .ng          { grid-template-columns: 1fr; }
+
+  /* ── MODAL ── */
+  .modal { width: 94vw; padding: 20px; }
+
+  /* ── DATA TABLE: horizontal scroll ── */
+  .data-tbl { overflow-x: auto; }
+  .data-tbl table { min-width: 480px; }
+}
+
+/* ── VERY SMALL  (≤ 380px) ── */
+@media (max-width: 380px) {
+  .kpi-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kpi-val { font-size: 20px; }
+  .tab-btn { padding: 9px 8px; font-size: 10px; }
+}

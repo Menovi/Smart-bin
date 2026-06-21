@@ -15,6 +15,7 @@
  */
 
 import { ACO_ANTS, ACO_ITERS, ALPHA, BETA, RHO, Q } from '../config/constants.js';
+import { priorityScore } from '../utils/priority.js';
 
 /**
  * Run ACO for one truck's bin list.
@@ -80,7 +81,8 @@ function constructRoute(n, pheromone, DD, dD, candidates) {
       if (visited[j]) continue;
       const tau = current === -1 ? 1.0 : pheromone[current][j];
       const d   = current === -1 ? dD[j] : DD[current][j];
-      const eta = (1 + (candidates[j].fill / 100) * 2) / (d < 1e-4 ? 1e-4 : d);
+      // η = (1 + 2×priority) / distance  — ants prefer closer AND higher-priority bins
+      const eta = (1 + priorityScore(candidates[j]) * 2) / (d < 1e-4 ? 1e-4 : d);
       probs[j]  = Math.pow(tau, ALPHA) * Math.pow(eta, BETA);
       total    += probs[j];
     }
@@ -117,7 +119,7 @@ export function routeCost(route, DD, dD, candidates) {
   let c = dD[route[0]];
   for (let i = 0; i < route.length - 1; i++) c += DD[route[i]][route[i + 1]];
   c += dD[route[route.length - 1]];
-  // Urgency penalty: visiting a near-full bin late is bad
-  route.forEach((idx, pos) => { c += (candidates[idx].fill / 100) * pos * 0.08; });
+  // Urgency penalty: visiting a high-priority bin late (litter+fill) is bad
+  route.forEach((idx, pos) => { c += priorityScore(candidates[idx]) * pos * 0.08; });
   return c;
 }

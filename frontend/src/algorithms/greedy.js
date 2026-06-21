@@ -11,9 +11,10 @@
  *  - The initial solution seed inside ACO (when needed)
  */
 
-import { haversine }    from '../utils/geo.js';
-import { routeColor }   from '../utils/colors.js';
+import { haversine }      from '../utils/geo.js';
+import { routeColor }     from '../utils/colors.js';
 import { MIN_FILL, TRUCKS_PER_DEPOT } from '../config/constants.js';
+import { priorityScore }  from '../utils/priority.js';
 
 /**
  * Build greedy routes for all depots / trucks.
@@ -29,7 +30,7 @@ export function buildGreedyRoutes(bins, depots) {
   depots.forEach((depot, di) => {
     const depotBins = eligible
       .filter(b => b.depotId === depot.id)
-      .sort((a, b) => b.fill - a.fill);       // high-fill first
+      .sort((a, b) => priorityScore(b) - priorityScore(a));  // highest priority first
 
     for (let ti = 0; ti < TRUCKS_PER_DEPOT; ti++) {
       const truckBins = depotBins.filter((_, i) => i % TRUCKS_PER_DEPOT === ti);
@@ -69,7 +70,8 @@ export function nearestNeighbour(depot, candidates) {
 
     remaining.forEach((bin, i) => {
       const dist  = haversine(current.lat, current.lng, bin.lat, bin.lng);
-      const score = dist * (1 - bin.fill / 200);   // fill-weighted
+      // Lower score = preferred: closer bins win, higher priority breaks ties
+      const score = dist / (1 + priorityScore(bin));
       if (score < bestScore) { bestScore = score; bestBin = bin; bestIdx = i; }
     });
 

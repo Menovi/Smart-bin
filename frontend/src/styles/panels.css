@@ -114,7 +114,7 @@
   vertical-align: middle;
 }
 .data-tbl tr:last-child td { border-bottom: none; }
-.data-tbl tr:hover td { background: rgba(255,255,255,.015); }
+.data-tbl tr:hover td { background: var(--surface2); }
 .td-id  { font-family: var(--fm); font-weight: 700; color: var(--accent); font-size: 11px; }
 .td-co  { font-family: var(--fm); font-size: 10px; color: var(--muted); }
 

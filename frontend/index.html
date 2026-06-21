@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SmartBin — MDVRP Intelligence Platform</title>
+    <title>SmartBin - MDVRP Intelligence Platform</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap"
@@ -15,7 +15,7 @@
     />
   </head>
   <body>
-    <!-- ── TOP BAR ── -->
+    <!-- TOP BAR -->
     <div class="topbar">
       <div class="logo">SmartBin <span>/ MDVRP</span></div>
       <div class="tdiv"></div>
@@ -46,10 +46,13 @@
           <div class="d"></div>
           <span id="oC">0</span> OK
         </div>
+        <button class="theme-toggle" id="themeToggle">
+          <span class="theme-toggle-icon">☀️</span><span>Light</span>
+        </button>
       </div>
     </div>
 
-    <!-- ── TABS ── -->
+    <!-- TABS -->
     <div class="tabs">
       <button class="tab-btn" data-tab="map">🗺️ Live Map</button>
       <button class="tab-btn" data-tab="iotlive">🔌 Smart Bin</button>
@@ -61,123 +64,105 @@
       <button class="tab-btn" data-tab="analytics">📈 Analytics</button>
     </div>
 
-    <!-- ── DEMO BANNER ── -->
+    <!-- DEMO BANNER -->
     <div class="demo-banner" id="demoBanner">
       🎬 Demo Mode — viewing sample data for Bangalore (120 bins, 3 depots)
       <button class="demo-banner-exit" id="demoBannerExit">Exit Demo</button>
     </div>
 
-    <!-- ── CONTENT ── -->
+    <!-- CONTENT -->
     <div class="content">
       <!-- MAP TAB -->
       <div class="tab-panel" id="panel-map">
         <div id="map">
           <div id="mapLoading">
             <div class="spin-ring"></div>
-            <div id="algoStatus">Loading map…</div>
+            <div id="algoStatus">Loading map...</div>
           </div>
           <div class="add-hint" id="addHint">Click anywhere to place a bin</div>
         </div>
-        <div class="map-sidebar">
-          <div id="sidebar-top">
-          <div class="ss">
-            <div class="st">Depots &amp; Coverage</div>
-            <div id="depotLegend"></div>
-            <button class="btn-add" id="btnAddDepot" style="margin-top:8px;">＋ Add Depot</button>
-          </div>
-          <div class="ss">
-            <div class="st">Fill Level</div>
-            <div class="fill-legend">
-              <div class="fl-row">
-                <span
-                  class="fl-dot"
-                  style="background: #ff1744; box-shadow: 0 0 7px #ff1744"
-                ></span
-                ><span>Critical ≥90%</span>
-              </div>
-              <div class="fl-row">
-                <span
-                  class="fl-dot"
-                  style="background: #ff6d00; box-shadow: 0 0 7px #ff6d00"
-                ></span
-                ><span>High ≥75%</span>
-              </div>
-              <div class="fl-row">
-                <span
-                  class="fl-dot"
-                  style="background: #ffea00; box-shadow: 0 0 7px #ffea00"
-                ></span
-                ><span>Moderate ≥60%</span>
-              </div>
-              <div class="fl-row">
-                <span
-                  class="fl-dot"
-                  style="background: #00e676; box-shadow: 0 0 7px #00e676"
-                ></span
-                ><span>Low &lt;60%</span>
-              </div>
-              <div
-                style="
-                  margin-top: 8px;
-                  padding-top: 8px;
-                  border-top: 1px solid var(--border);
-                "
-              >
-                <div class="fl-row">
-                  <span
-                    class="fl-dot"
-                    style="
-                      background: transparent;
-                      border: 2px dashed #ffea00;
-                      box-shadow: none;
-                    "
-                  ></span
-                  ><span style="color: #ffea00">Extended dispatch</span>
+        <div class="map-sidebar-wrap">
+          <div class="map-sidebar" id="mapSidebar">
+            <div class="sidebar-scroll">
+              <div id="sidebar-top">
+                <div class="ss">
+                  <div class="st">Depots &amp; Coverage</div>
+                  <div id="depotLegend"></div>
+                  <button class="btn-add" id="btnAddDepot" style="margin-top:8px;">+ Add Depot</button>
                 </div>
+                <div class="ss">
+                  <div class="st">Fill Level</div>
+                  <div class="fill-legend">
+                    <div class="fl-row">
+                      <span class="fl-dot" style="background:#ff1744;box-shadow:0 0 7px #ff1744"></span>
+                      <span>Critical &ge;90%</span>
+                    </div>
+                    <div class="fl-row">
+                      <span class="fl-dot" style="background:#ff6d00;box-shadow:0 0 7px #ff6d00"></span>
+                      <span>High &ge;75%</span>
+                    </div>
+                    <div class="fl-row">
+                      <span class="fl-dot" style="background:#ffea00;box-shadow:0 0 7px #ffea00"></span>
+                      <span>Moderate &ge;60%</span>
+                    </div>
+                    <div class="fl-row">
+                      <span class="fl-dot" style="background:#00e676;box-shadow:0 0 7px #00e676"></span>
+                      <span>Low &lt;60%</span>
+                    </div>
+                    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+                      <div class="fl-row">
+                        <span class="fl-dot" style="background:transparent;border:2px dashed #ffea00;box-shadow:none;"></span>
+                        <span style="color:#ffea00">Extended dispatch</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="ss">
+                  <div class="st">Mode</div>
+                  <button class="btn-demo" id="btnDemo">🎬 Load Demo</button>
+                  <div class="demo-hint" id="demoHint">Place your own bins using the button below, or load the demo to explore all features.</div>
+                </div>
+                <div class="ss">
+                  <div class="st">Route Controls</div>
+                  <button class="btn-add" id="btnAdd">+ Place Bin</button>
+                  <button class="btn-primary" id="btnGreedy">🚛 Fast Route (Greedy NN)</button>
+                  <button class="btn-osrm" id="btnHybrid">🧬 Smart Route (ACO+LNS+ILS)</button>
+                  <button class="btn-sec" id="btnClear">&#10005; Clear Routes</button>
+                  <div class="progress-wrap" id="progWrap" style="display:none">
+                    <div class="progress-label">
+                      <span id="progPhase">Initialising...</span>
+                      <span id="progPct">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                      <div class="progress-fill" id="progFill" style="width:0%"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="ss" id="routeSumSec" style="display:none">
+                  <div class="st">Route Summary</div>
+                  <div class="route-info" id="routeSum"></div>
+                </div>
+              </div><!-- /sidebar-top -->
+
+              <!-- Collapsible bin list -->
+              <div class="bin-list-header" id="binListHeader">
+                <div class="bin-list-header-left">
+                  <span class="bin-list-header-label">Bins (by priority)</span>
+                  <span class="bin-list-header-count" id="binListCount">0</span>
+                </div>
+                <span class="bin-list-chevron" id="binListChevron">&#9650;</span>
               </div>
+              <div class="bin-list" id="binList"></div>
+            </div><!-- /sidebar-scroll -->
+
+            <div class="refresh-bar">
+              <div class="live-dot"></div>
+              Live &middot; auto-refresh <span id="rcd">30s</span>
             </div>
-          </div>
-          <div class="ss">
-            <div class="st">Mode</div>
-            <button class="btn-demo" id="btnDemo">🎬 Load Demo</button>
-            <div class="demo-hint" id="demoHint">Place your own bins using the button below, or load the demo to explore all features.</div>
-          </div>
-          <div class="ss">
-            <div class="st">Route Controls</div>
-            <button class="btn-add" id="btnAdd">＋ Place Bin</button>
-            <button class="btn-primary" id="btnGreedy">
-              🚛 Fast Route (Greedy NN)
-            </button>
-            <button class="btn-osrm" id="btnHybrid">
-              🧬 Smart Route (ACO+LNS+ILS)
-            </button>
-            <button class="btn-sec" id="btnClear">✕ Clear Routes</button>
-            <div class="progress-wrap" id="progWrap" style="display: none">
-              <div class="progress-label">
-                <span id="progPhase">Initialising…</span>
-                <span id="progPct">0%</span>
-              </div>
-              <div class="progress-bar">
-                <div
-                  class="progress-fill"
-                  id="progFill"
-                  style="width: 0%"
-                ></div>
-              </div>
-            </div>
-          </div>
-          <div class="ss" id="routeSumSec" style="display: none">
-            <div class="st">Route Summary</div>
-            <div class="route-info" id="routeSum"></div>
-          </div>
-          </div><!-- /sidebar-top -->
-          <div class="st sidebar-bins-label">Bins (sorted by fill)</div>
-          <div class="bin-list" id="binList"></div>
-          <div class="refresh-bar">
-            <div class="live-dot"></div>
-            Live · auto-refresh <span id="rcd">30s</span>
-          </div>
-        </div>
+          </div><!-- /map-sidebar -->
+          <button class="sidebar-toggle" id="sidebarToggle" title="Toggle sidebar">&#9664;</button>
+        </div><!-- /map-sidebar-wrap -->
+        <div class="sidebar-scrim" id="sidebarScrim"></div>
       </div>
 
       <!-- DASHBOARD TAB -->
@@ -242,7 +227,7 @@
         <div id="modalPhases"></div>
         <div class="modal-prog">
           <div class="modal-prog-label">
-            <span id="mpLabel">Initialising…</span>
+            <span id="mpLabel">Initialising...</span>
             <span id="mpPct">0%</span>
           </div>
           <div class="modal-prog-bar">

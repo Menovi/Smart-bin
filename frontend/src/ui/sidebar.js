@@ -8,7 +8,8 @@
  *   - Route summary
  */
 
-import { fillColor, statusInfo } from '../utils/colors.js';
+import { fillColor, statusInfo }        from '../utils/colors.js';
+import { priorityScore, priorityLabel } from '../utils/priority.js';
 
 // ── DEPOT LEGEND ────────────────────────────────────
 
@@ -47,7 +48,10 @@ export function renderDepotLegend(depots, onDeleteCb, onEditCb) {
 // ── BIN LIST ────────────────────────────────────────
 
 export function renderBinList(bins, depots, onClickCb) {
-  const sorted = [...bins].sort((a, b) => b.fill - a.fill);
+  const sorted = [...bins].sort((a, b) => priorityScore(b) - priorityScore(a));
+
+  const countEl = document.getElementById('binListCount');
+  if (countEl) countEl.textContent = sorted.length;
 
   document.getElementById('binList').innerHTML = sorted
     .map(b => {
@@ -55,11 +59,19 @@ export function renderBinList(bins, depots, onClickCb) {
       const depot  = depots.find(d => d.id === b.depotId);
       const dColor = depot?.color ?? 'var(--muted)';
       const extTag = b.extended ? ' ⚠ext' : '';
+      const ps     = priorityScore(b);
+      const pl     = priorityLabel(ps);
+      const litter = b.litterCount ?? 0;
+      const litterTag = litter > 0
+        ? `<span style="color:#ff9800;font-size:8px;margin-left:4px;">🗑 ${litter}</span>` : '';
 
       return `<div class="bli" id="bli-${b.id}" data-bin-id="${b.id}">
                 <div style="width:7px;height:7px;border-radius:50%;background:${col};box-shadow:0 0 5px ${col};flex-shrink:0;"></div>
                 <div class="bli-bar-wrap">
-                  <div class="bli-id">${b.id}</div>
+                  <div class="bli-id" style="display:flex;align-items:center;">
+                    ${b.id}${litterTag}
+                    <span style="margin-left:auto;font-size:8px;color:${pl.color};font-weight:700;">${pl.label}</span>
+                  </div>
                   <div class="bli-bar">
                     <div class="bli-fill" style="width:${b.fill}%;background:${col};"></div>
                   </div>
